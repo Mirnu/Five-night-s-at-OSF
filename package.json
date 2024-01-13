@@ -28,6 +28,9 @@
     "@flamework/components": "^1.0.1",
     "@flamework/core": "^1.0.1",
     "@flamework/networking": "^1.0.1",
-    "@rbxts/services": "^1.5.1"
+    "@rbxts/replica": "^1.0.5",
+    "@rbxts/replicaservice": "^1.1.0-ts.2",
+    "@rbxts/services": "^1.5.1",
+    "@rbxts/signal": "^1.1.1"
   }
 }
