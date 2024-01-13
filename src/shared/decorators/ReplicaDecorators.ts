@@ -1,7 +1,7 @@
 import { Dependency } from "@flamework/core";
 import type { PlayerController } from "client/controllers/PlayerController";
 import CallFunction from "shared/utils/CallFunction";
-import { PlayerDataReplica } from "types/Replica";
+import { PlayerDataReplica } from "types/Mad";
 
 type CallbackWithReplica = (replica: PlayerDataReplica) => unknown;
 

@@ -4,7 +4,7 @@ import { ReplicaController } from "@rbxts/replicaservice";
 import Signal from "@rbxts/signal";
 import { MainMenu } from "client/components/UI/MainMenu/MainMenu";
 import { LocalPlayer } from "client/utils";
-import { PLayerStateData, PlayerDataReplica } from "types/Replica";
+import { PLayerStateData, PlayerDataReplica } from "types/Mad";
 
 @Controller({})
 export class PlayerController implements OnStart {

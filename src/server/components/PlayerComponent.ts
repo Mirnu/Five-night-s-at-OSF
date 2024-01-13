@@ -1,7 +1,7 @@
 import { OnStart } from "@flamework/core";
 import { Replica, ReplicaService } from "@rbxts/replicaservice";
 import { Component, BaseComponent } from "@flamework/components";
-import { PLayerStateData } from "types/Replica";
+import { PLayerStateData } from "types/Mad";
 import Signal from "@rbxts/signal";
 import { SessionStatus } from "shared/types/SessionStatus";
 
@@ -10,7 +10,7 @@ interface Attributes {}
 const PlayerclassToken = ReplicaService.NewClassToken("PlayerState");
 
 @Component({})
-export class PlayerComponents extends BaseComponent<Attributes, Player> implements OnStart {
+export class PlayerComponent extends BaseComponent<Attributes, Player> implements OnStart {
 	public PlayerStateReplica?: Replica<"PlayerState">;
 	public PlayerStateChanged = new Signal<(data: PLayerStateData) => void>();
 	public SessionStatusChangedSignal = new Signal<(data: PLayerStateData) => void>();
@@ -29,7 +29,9 @@ export class PlayerComponents extends BaseComponent<Attributes, Player> implemen
 			ClassToken: PlayerclassToken,
 			Data: {
 				Static: {
-					Night: 2,
+					Night: 1,
+				},
+				Dynamic: {
 					SessionStatus: SessionStatus.Menu,
 				},
 			},
@@ -39,7 +41,7 @@ export class PlayerComponents extends BaseComponent<Attributes, Player> implemen
 
 	public StartNight(): number {
 		if (this.PlayerStateReplica?.Data.Static.Night === undefined) return -1;
-		this.PlayerStateReplica.SetValue("Static.SessionStatus", SessionStatus.Playing);
+		this.PlayerStateReplica.SetValue("Dynamic.SessionStatus", SessionStatus.Playing);
 		this.playerStateChange();
 		return this.PlayerStateReplica!.Data.Static.Night;
 	}
@@ -50,7 +52,7 @@ export class PlayerComponents extends BaseComponent<Attributes, Player> implemen
 	}
 
 	public SetSessionStatus(sessionStatus: SessionStatus) {
-		this.PlayerStateReplica?.SetValue("Static.SessionStatus", sessionStatus);
+		this.PlayerStateReplica?.SetValue("Dynamic.SessionStatus", sessionStatus);
 		this.SessionStatusChangedSignal.Fire(this.PlayerStateReplica!.Data);
 	}
 }

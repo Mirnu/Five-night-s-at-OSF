@@ -7,6 +7,8 @@ declare global {
 			Data: {
 				Static: {
 					Night: number;
+				};
+				Dynamic: {
 					SessionStatus: SessionStatus;
 				};
 			};
@@ -17,6 +19,8 @@ declare global {
 export type PLayerStateData = {
 	Static: {
 		Night: number;
+	};
+	Dynamic: {
 		SessionStatus: SessionStatus;
 	};
 };
