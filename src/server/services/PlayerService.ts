@@ -1,9 +1,13 @@
 import { Components } from "@flamework/components";
 import { Service, OnStart, OnInit } from "@flamework/core";
+import Maid from "@rbxts/maid";
 import ProfileService from "@rbxts/profileservice";
 import { Profile } from "@rbxts/profileservice/globals";
 import { Players, RunService } from "@rbxts/services";
+import { Night } from "server/classes/Night";
 import { PlayerComponent } from "server/components/PlayerComponent";
+import { Events } from "server/network";
+import { SessionStatus } from "shared/types/SessionStatus";
 
 let DataStoreName = "Production";
 const KEY_TEMPLATE = "%d_Data";
@@ -24,9 +28,19 @@ export class PlayerService implements OnStart {
 		Players.PlayerAdded.Connect((player) => {
 			const component = this.components.addComponent<PlayerComponent>(player);
 			this.createProfile(player, component);
+			component.SetSessionStatus(SessionStatus.Menu);
 		});
 		Players.PlayerRemoving.Connect((player) => {
 			this.removeProfile(player);
+		});
+		this.gameInit();
+	}
+
+	private gameInit() {
+		Events.NewGame.connect((player) => {
+			const playerComponent = this.components.getComponent<PlayerComponent>(player)!;
+			const night = new Night(playerComponent, 1);
+			night.Start();
 		});
 	}
 

@@ -10,6 +10,7 @@ declare global {
 				};
 				Dynamic: {
 					SessionStatus: SessionStatus;
+					Time: number;
 				};
 			};
 		};
@@ -22,6 +23,7 @@ export type PLayerStateData = {
 	};
 	Dynamic: {
 		SessionStatus: SessionStatus;
+		Time: number;
 	};
 };
 export type PlayerDataReplica = Replica<"PlayerState">;

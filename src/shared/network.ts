@@ -1,7 +1,7 @@
 import { Networking } from "@flamework/networking";
 
 interface ClientToServerEvents {
-	StartGmae(): void;
+	NewGame(): void;
 	ContinueGame(): void;
 }
 

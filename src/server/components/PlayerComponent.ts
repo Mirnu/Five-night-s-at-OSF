@@ -32,7 +32,8 @@ export class PlayerComponent extends BaseComponent<Attributes, Player> implement
 					Night: 1,
 				},
 				Dynamic: {
-					SessionStatus: SessionStatus.Menu,
+					SessionStatus: SessionStatus.Init,
+					Time: 12,
 				},
 			},
 			Replication: this.instance,
@@ -46,6 +47,10 @@ export class PlayerComponent extends BaseComponent<Attributes, Player> implement
 		return this.PlayerStateReplica!.Data.Static.Night;
 	}
 
+	public SetTime(time: number) {
+		this.PlayerStateReplica?.SetValue("Dynamic.Time", time);
+	}
+
 	public SetNight(night: number) {
 		this.PlayerStateReplica?.SetValue("Static.Night", night);
 		this.playerStateChange();
@@ -54,5 +59,11 @@ export class PlayerComponent extends BaseComponent<Attributes, Player> implement
 	public SetSessionStatus(sessionStatus: SessionStatus) {
 		this.PlayerStateReplica?.SetValue("Dynamic.SessionStatus", sessionStatus);
 		this.SessionStatusChangedSignal.Fire(this.PlayerStateReplica!.Data);
+	}
+
+	public FinishNight() {
+		this.PlayerStateReplica?.SetValue("Static.Night", this.PlayerStateReplica.Data.Static.Night + 1);
+		this.SetSessionStatus(SessionStatus.Menu);
+		this.SetTime(12);
 	}
 }

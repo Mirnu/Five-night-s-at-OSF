@@ -1,16 +1,20 @@
 interface Menu extends ScreenGui {
-	Contine: TextButton;
+	Setting: TextButton;
+	NewGame: TextButton;
 	Extra: TextButton;
 	Frame: Frame;
-	NewGame: TextButton;
+	ContinueGame: TextButton;
+}
+
+interface GameInterface extends ScreenGui {
+	Time: TextLabel;
+	Start: Frame & {
+		Time: TextLabel;
+		Night: TextLabel;
+	};
 }
 
 interface PlayerGui extends Instance {
 	Menu: Menu;
-	Camera: ScreenGui & {
-		Glitch: ImageLabel;
-		Zaklych: TextButton;
-		TexPod: TextButton;
-		Izolyator: TextButton;
-	};
+	GameInterface: GameInterface;
 }
