@@ -15,6 +15,7 @@ export class GameInterfaceComponent extends BaseComponent<Attributes, GameInterf
 	private init(replica: PlayerDataReplica) {
 		replica.ListenToChange("Dynamic.SessionStatus", (newValue) => {
 			if (newValue === SessionStatus.Playing) this.instance.Enabled = true;
+			else this.instance.Enabled = false;
 		});
 		replica.ListenToChange("Dynamic.Time", (newValue) => {
 			let text = "AM";

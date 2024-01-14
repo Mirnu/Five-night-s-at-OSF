@@ -1,4 +1,4 @@
-interface Computer extends Model {
+interface Monitor extends Model {
 	ScreenBlack: Part & {
 		Decal: Decal;
 	};

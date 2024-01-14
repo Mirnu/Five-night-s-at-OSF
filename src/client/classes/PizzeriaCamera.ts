@@ -2,8 +2,11 @@ import { UserInputService, Workspace } from "@rbxts/services";
 import { PlayerCamera } from "./PlayerCamera";
 import { CameraState } from "shared/types/CameraState";
 import { Noises } from "client/utils";
+import { PlayerController } from "client/controllers/PlayerController";
+import { SessionStatus } from "shared/types/SessionStatus";
 
 export class PizzeriaCamera {
+	private playerController!: PlayerController;
 	private playerCamera!: PlayerCamera;
 	private cameraGui!: CameraGui;
 	private camerasEnabled = false;
@@ -24,8 +27,9 @@ export class PizzeriaCamera {
 		});
 	}
 
-	public Init(camera: PlayerCamera, cameraGui: CameraGui) {
-		this.playerCamera = camera;
+	public Init(playerController: PlayerController, cameraGui: CameraGui) {
+		this.playerController = playerController;
+		this.playerCamera = playerController.playerCamera;
 		this.cameraGui = cameraGui;
 		UserInputService.InputBegan.Connect((input) => {
 			if (input.KeyCode === Enum.KeyCode.Space) this.spacePressed();
@@ -37,10 +41,16 @@ export class PizzeriaCamera {
 			button.Activated.Connect(() => {
 				const cameraPart = Workspace.map.Cameras.FindFirstChild(button.Name) as Part;
 				if (this.camerasEnabled) {
-					camera.SetCameraCFrame(cameraPart.CFrame);
+					this.playerCamera.SetCameraCFrame(cameraPart.CFrame);
 					this.lastCamera = cameraPart;
 				}
 			});
+		});
+
+		playerController.playerStateChanged.Connect((replica) => {
+			if (replica.Data.Dynamic.SessionStatus === SessionStatus.Menu) {
+				if (this.noisesthread) task.cancel(this.noisesthread);
+			}
 		});
 	}
 

@@ -3,6 +3,7 @@ import { Service, OnStart } from "@flamework/core";
 import ProfileService from "@rbxts/profileservice";
 import { Profile } from "@rbxts/profileservice/globals";
 import { Players, RunService } from "@rbxts/services";
+import { Enemies } from "server/classes/Enemies";
 import { Night } from "server/classes/Night";
 import { PlayerComponent } from "server/components/PlayerComponent";
 import { Events } from "server/network";
@@ -33,6 +34,7 @@ export class PlayerService implements OnStart {
 			this.removeProfile(player);
 		});
 		this.gameInit();
+		new Enemies().Init();
 	}
 
 	private gameInit() {

@@ -4,6 +4,7 @@ import { Component, BaseComponent } from "@flamework/components";
 import { PLayerStateData } from "types/Mad";
 import Signal from "@rbxts/signal";
 import { SessionStatus } from "shared/types/SessionStatus";
+import { Events } from "server/network";
 
 interface Attributes {}
 
@@ -61,9 +62,13 @@ export class PlayerComponent extends BaseComponent<Attributes, Player> implement
 		this.SessionStatusChangedSignal.Fire(this.PlayerStateReplica!.Data);
 	}
 
-	public FinishNight() {
-		this.PlayerStateReplica?.SetValue("Static.Night", this.PlayerStateReplica.Data.Static.Night + 1);
+	public EndNight() {
 		this.SetSessionStatus(SessionStatus.Menu);
 		this.SetTime(12);
+	}
+
+	public FinishNight() {
+		this.PlayerStateReplica?.SetValue("Static.Night", this.PlayerStateReplica.Data.Static.Night + 1);
+		this.EndNight();
 	}
 }

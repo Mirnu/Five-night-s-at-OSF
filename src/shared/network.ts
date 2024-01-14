@@ -7,6 +7,7 @@ interface ClientToServerEvents {
 	CameraStateChanged(state: CameraState): void;
 	DoorOpened(): void;
 	DoorClosed(): void;
+	KillPlayer(): void;
 }
 
 interface ServerToClientEvents {}

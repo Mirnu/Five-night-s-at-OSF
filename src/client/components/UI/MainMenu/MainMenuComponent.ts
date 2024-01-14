@@ -22,6 +22,7 @@ export class MainMenuComponent extends BaseComponent<Attributes, Menu> implement
 	@OnReplicaCreated()
 	private Init(replica: PlayerDataReplica) {
 		replica.ListenToChange("Dynamic.SessionStatus", (newValue) => {
+			print(newValue);
 			if (newValue === SessionStatus.Menu) this.instance.Enabled = true;
 			else if (newValue === SessionStatus.Playing) this.instance.Enabled = false;
 

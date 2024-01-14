@@ -1,7 +1,6 @@
 import { Components } from "@flamework/components";
-import { Controller, OnStart, OnInit } from "@flamework/core";
+import { Controller, OnStart } from "@flamework/core";
 import { ReplicaController } from "@rbxts/replicaservice";
-import { UserInputService } from "@rbxts/services";
 import Signal from "@rbxts/signal";
 import { InputService } from "client/classes/InputService";
 import { PizzeriaCamera } from "client/classes/PizzeriaCamera";
@@ -9,14 +8,20 @@ import { PlayerCamera } from "client/classes/PlayerCamera";
 import { GameInterfaceComponent } from "client/components/UI/MainMenu/GameInterfaceComponent";
 import { MainMenuComponent } from "client/components/UI/MainMenu/MainMenuComponent";
 import { LocalPlayer } from "client/utils";
+import { SessionStatus } from "shared/types/SessionStatus";
 import { PLayerStateData, PlayerDataReplica } from "types/Mad";
 
-@Controller({})
+@Controller({
+	loadOrder: 0,
+})
 export class PlayerController implements OnStart {
 	public LastPlayerData?: PLayerStateData;
 	public PlayerData!: PLayerStateData;
 	private replica!: PlayerDataReplica;
 	private waitingForReplica?: Signal;
+
+	public playerState = SessionStatus.Init;
+	public playerStateChanged = new Signal<(replica: PlayerDataReplica) => void>();
 
 	public playerCamera!: PlayerCamera;
 
@@ -35,10 +40,10 @@ export class PlayerController implements OnStart {
 		const gameInterface = PlayerGui.WaitForChild("GameInterface") as GameInterface;
 		this.components.addComponent<GameInterfaceComponent>(gameInterface);
 		this.components.addComponent<MainMenuComponent>(Menu);
-		this.playerCamera = new PlayerCamera();
+		this.playerCamera = new PlayerCamera(this);
 		this.playerCamera.OnStart();
 		const pizzeriaCamera = new PizzeriaCamera();
-		pizzeriaCamera.Init(this.playerCamera, CameraGui);
+		pizzeriaCamera.Init(this, CameraGui);
 		new InputService(this).Init();
 	}
 
@@ -56,6 +61,12 @@ export class PlayerController implements OnStart {
 			this.replica = replica;
 			this.waitingForReplica?.Fire();
 			this.waitingForReplica?.Destroy();
+
+			replica.ListenToChange("Dynamic.SessionStatus", (newValue) => {
+				print(newValue);
+				this.playerState = newValue;
+				this.playerStateChanged.Fire(replica);
+			});
 		});
 	}
 }

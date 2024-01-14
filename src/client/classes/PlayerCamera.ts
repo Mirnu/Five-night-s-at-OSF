@@ -1,4 +1,6 @@
 import { TweenService, UserInputService, Workspace } from "@rbxts/services";
+import Signal from "@rbxts/signal";
+import { PlayerController } from "client/controllers/PlayerController";
 import { Events } from "client/network";
 import { LocalPlayer } from "client/utils";
 import { OnReplicaCreated } from "shared/decorators/ReplicaDecorators";
@@ -9,7 +11,7 @@ import { PlayerDataReplica } from "types/Mad";
 const CameraRestriction = new ReadonlyMap<number, [number, number]>([[1, [170, 1]]]);
 
 export class PlayerCamera {
-	private camera = Workspace.CurrentCamera!;
+	public camera = Workspace.CurrentCamera!;
 	private mouse: PlayerMouse = LocalPlayer.GetMouse();
 
 	public canBack = true;
@@ -23,6 +25,8 @@ export class PlayerCamera {
 		Workspace.WaitForChild("map").WaitForChild("Insulator").WaitForChild("StartPart") as BasePart
 	).CFrame;
 
+	public CameraStateChanged = new Signal<(state: CameraState) => void>();
+
 	private sensitivity: number = 2;
 	public canRotate = false;
 
@@ -31,6 +35,8 @@ export class PlayerCamera {
 
 	private rightBorder!: number;
 	private leftBorder!: number;
+
+	constructor(private playerController: PlayerController) {}
 
 	public OnStart() {
 		this.rightBorder = this.camera.ViewportSize.X - this.camera.ViewportSize.X / 8;
@@ -52,17 +58,17 @@ export class PlayerCamera {
 				this.MoveMouse(this.mouse);
 			}
 		});
+		this.Init();
 	}
 
-	@OnReplicaCreated()
-	private Init(replica: PlayerDataReplica) {
-		replica.ListenToChange("Dynamic.SessionStatus", (newValue) => {
-			if (newValue === SessionStatus.Playing) {
+	private Init() {
+		this.playerController.playerStateChanged.Connect((replica) => {
+			if (replica.Data.Dynamic.SessionStatus === SessionStatus.Playing) {
 				this.CameraState = CameraState.computer;
 				this.SetCameraCFrame(this.officeCameraCFrame);
 				this.canRotate = true;
 				this.setCameraRestriction(replica.Data.Static.Night);
-			} else if (newValue === SessionStatus.Menu) {
+			} else if (replica.Data.Dynamic.SessionStatus === SessionStatus.Menu) {
 				this.CameraState = CameraState.menu;
 				this.SetCameraCFrame(this.menuCamereCFrame);
 				this.canRotate = false;
@@ -110,9 +116,9 @@ export class PlayerCamera {
 	}
 
 	public SetCameraState(state: CameraState) {
-		print(state);
 		this.CameraState = state;
 		Events.CameraStateChanged.fire(this.CameraState);
+		this.CameraStateChanged.Fire(this.CameraState);
 	}
 
 	public SetCameraCFrame(cframe: CFrame) {
