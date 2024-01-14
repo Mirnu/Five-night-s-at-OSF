@@ -2,7 +2,7 @@ import Maid from "@rbxts/maid";
 import Signal from "@rbxts/signal";
 import { PlayerComponent } from "server/components/PlayerComponent";
 
-const speedNight = 50;
+const speedNight = 5;
 
 export class Night {
 	constructor(private playerComponent: PlayerComponent, private night: number) {}

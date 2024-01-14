@@ -1,6 +1,5 @@
 import { Components } from "@flamework/components";
-import { Service, OnStart, OnInit } from "@flamework/core";
-import Maid from "@rbxts/maid";
+import { Service, OnStart } from "@flamework/core";
 import ProfileService from "@rbxts/profileservice";
 import { Profile } from "@rbxts/profileservice/globals";
 import { Players, RunService } from "@rbxts/services";
