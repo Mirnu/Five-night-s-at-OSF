@@ -6,6 +6,11 @@ interface Menu extends ScreenGui {
 	ContinueGame: TextButton;
 }
 
+interface CameraGui extends ScreenGui {
+	Cameras: Folder;
+	Glitch: ImageLabel;
+}
+
 interface GameInterface extends ScreenGui {
 	Time: TextLabel;
 	Start: Frame & {
@@ -15,6 +20,7 @@ interface GameInterface extends ScreenGui {
 }
 
 interface PlayerGui extends Instance {
+	Camera: Camera;
 	Menu: Menu;
 	GameInterface: GameInterface;
 }

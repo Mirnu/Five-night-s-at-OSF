@@ -1,7 +1,9 @@
 import { Components } from "@flamework/components";
 import { Controller, OnStart, OnInit } from "@flamework/core";
 import { ReplicaController } from "@rbxts/replicaservice";
+import { UserInputService } from "@rbxts/services";
 import Signal from "@rbxts/signal";
+import { InputService } from "client/classes/InputService";
 import { PizzeriaCamera } from "client/classes/PizzeriaCamera";
 import { PlayerCamera } from "client/classes/PlayerCamera";
 import { GameInterfaceComponent } from "client/components/UI/MainMenu/GameInterfaceComponent";
@@ -29,13 +31,15 @@ export class PlayerController implements OnStart {
 	private init() {
 		const PlayerGui = LocalPlayer.WaitForChild("PlayerGui") as PlayerGui;
 		const Menu = PlayerGui.WaitForChild("Menu") as Menu;
+		const CameraGui = PlayerGui.WaitForChild("Camera") as CameraGui;
 		const gameInterface = PlayerGui.WaitForChild("GameInterface") as GameInterface;
 		this.components.addComponent<GameInterfaceComponent>(gameInterface);
 		this.components.addComponent<MainMenuComponent>(Menu);
 		this.playerCamera = new PlayerCamera();
 		this.playerCamera.OnStart();
 		const pizzeriaCamera = new PizzeriaCamera();
-		pizzeriaCamera.Init(this.playerCamera);
+		pizzeriaCamera.Init(this.playerCamera, CameraGui);
+		new InputService(this).Init();
 	}
 
 	public GetReplicaAsync() {

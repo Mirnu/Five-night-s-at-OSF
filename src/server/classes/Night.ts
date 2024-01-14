@@ -1,5 +1,3 @@
-import Maid from "@rbxts/maid";
-import Signal from "@rbxts/signal";
 import { PlayerComponent } from "server/components/PlayerComponent";
 
 const speedNight = 5;

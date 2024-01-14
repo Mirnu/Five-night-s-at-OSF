@@ -1,8 +1,12 @@
 import { Networking } from "@flamework/networking";
+import { CameraState } from "./types/CameraState";
 
 interface ClientToServerEvents {
 	NewGame(): void;
 	ContinueGame(): void;
+	CameraStateChanged(state: CameraState): void;
+	DoorOpened(): void;
+	DoorClosed(): void;
 }
 
 interface ServerToClientEvents {}

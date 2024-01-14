@@ -1,6 +1,8 @@
 import { TweenService, UserInputService, Workspace } from "@rbxts/services";
+import { Events } from "client/network";
 import { LocalPlayer } from "client/utils";
 import { OnReplicaCreated } from "shared/decorators/ReplicaDecorators";
+import { CameraState } from "shared/types/CameraState";
 import { SessionStatus } from "shared/types/SessionStatus";
 import { PlayerDataReplica } from "types/Mad";
 
@@ -10,8 +12,16 @@ export class PlayerCamera {
 	private camera = Workspace.CurrentCamera!;
 	private mouse: PlayerMouse = LocalPlayer.GetMouse();
 
-	public readonly officeCameraCFrame = Workspace.map.Province.StartPart.CFrame;
-	public readonly menuCamereCFrame = Workspace.map.Insulator.StartPart.CFrame;
+	public canBack = true;
+
+	public CameraState = CameraState.menu;
+
+	public readonly officeCameraCFrame = (
+		Workspace.WaitForChild("map").WaitForChild("Province").WaitForChild("StartPart") as BasePart
+	).CFrame;
+	public readonly menuCamereCFrame = (
+		Workspace.WaitForChild("map").WaitForChild("Insulator").WaitForChild("StartPart") as BasePart
+	).CFrame;
 
 	private sensitivity: number = 2;
 	public canRotate = false;
@@ -28,11 +38,11 @@ export class PlayerCamera {
 		this.camera.CameraType = Enum.CameraType.Scriptable;
 
 		UserInputService.InputBegan.Connect((input, gameProcessed) => {
-			if (!gameProcessed) return;
-			if (input.KeyCode === Enum.KeyCode.LeftShift) {
-				if (this.canRotate) return;
+			if (input.KeyCode === Enum.KeyCode.Q) {
+				if (this.canRotate || !this.canBack || this.CameraState === CameraState.computer) return;
 				this.canRotate = true;
 				this.MoveToCamera(this.officeCameraCFrame, new TweenInfo(1));
+				this.SetCameraState(CameraState.computer);
 			}
 		});
 
@@ -48,10 +58,12 @@ export class PlayerCamera {
 	private Init(replica: PlayerDataReplica) {
 		replica.ListenToChange("Dynamic.SessionStatus", (newValue) => {
 			if (newValue === SessionStatus.Playing) {
+				this.CameraState = CameraState.computer;
 				this.SetCameraCFrame(this.officeCameraCFrame);
 				this.canRotate = true;
 				this.setCameraRestriction(replica.Data.Static.Night);
 			} else if (newValue === SessionStatus.Menu) {
+				this.CameraState = CameraState.menu;
 				this.SetCameraCFrame(this.menuCamereCFrame);
 				this.canRotate = false;
 			}
@@ -97,13 +109,22 @@ export class PlayerCamera {
 		}
 	}
 
+	public SetCameraState(state: CameraState) {
+		print(state);
+		this.CameraState = state;
+		Events.CameraStateChanged.fire(this.CameraState);
+	}
+
 	public SetCameraCFrame(cframe: CFrame) {
 		this.camera.CFrame = cframe;
 	}
 
 	public MoveToCamera(cframe: CFrame, tweenInfo: TweenInfo) {
+		if (!this.canBack) return;
+		this.canBack = false;
 		const ts = TweenService.Create(this.camera, tweenInfo, { CFrame: cframe });
 		ts.Play();
+		ts.Completed.Connect(() => (this.canBack = true));
 		return ts;
 	}
 }
