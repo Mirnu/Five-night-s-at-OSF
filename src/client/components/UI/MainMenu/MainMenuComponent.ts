@@ -19,15 +19,8 @@ export class MainMenuComponent extends BaseComponent<Attributes, Menu> implement
 		this.initButtons();
 	}
 
-	@OnReplicaCreated()
-	private Init(replica: PlayerDataReplica) {
-		replica.ListenToChange("Dynamic.SessionStatus", (newValue) => {
-			print(newValue);
-			if (newValue === SessionStatus.Menu) this.instance.Enabled = true;
-			else if (newValue === SessionStatus.Playing) this.instance.Enabled = false;
-
-			if (replica.Data.Static.Night > 1) this.continueGame.Visible = true;
-		});
+	public Init(replica: PlayerDataReplica) {
+		if (replica.Data.Static.Night > 1) this.continueGame.Visible = true;
 	}
 
 	private initButtons() {

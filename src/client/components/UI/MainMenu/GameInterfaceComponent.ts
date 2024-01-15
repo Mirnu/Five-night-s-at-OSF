@@ -7,17 +7,16 @@ import { SessionStatus } from "shared/types/SessionStatus";
 interface Attributes {}
 
 @Component({})
-export class GameInterfaceComponent extends BaseComponent<Attributes, GameInterface> {
+export class GameInterfaceComponent extends BaseComponent<Attributes, GameInterface> implements OnStart {
 	private time = this.instance.Time;
 	private end = this.instance.Start;
 
-	@OnReplicaCreated()
-	private init(replica: PlayerDataReplica) {
-		replica.ListenToChange("Dynamic.SessionStatus", (newValue) => {
-			if (newValue === SessionStatus.Playing) this.instance.Enabled = true;
-			else this.instance.Enabled = false;
-		});
-		replica.ListenToChange("Dynamic.Time", (newValue) => {
+	onStart(): void {
+		this.instance.Enabled = true;
+	}
+
+	public Init(replica: PlayerDataReplica) {
+		return replica.ListenToChange("Dynamic.Time", (newValue) => {
 			let text = "AM";
 			if (newValue === 12) text = "PM";
 			this.time.Text = newValue + text;

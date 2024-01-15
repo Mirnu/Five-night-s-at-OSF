@@ -1,12 +1,13 @@
-import { OnStart } from "@flamework/core";
+import { OnStart, OnTick } from "@flamework/core";
 import { Component, BaseComponent } from "@flamework/components";
-import { Noises } from "client/utils";
+import { Noises, OfficeCameraCFrame } from "client/utils";
 import { PlayerController } from "client/controllers/PlayerController";
 import { CameraState } from "shared/types/CameraState";
 import { OnReplicaCreated } from "shared/decorators/ReplicaDecorators";
 import { PlayerDataReplica } from "types/Mad";
 import { SessionStatus } from "shared/types/SessionStatus";
 import { Events } from "client/network";
+import Maid from "@rbxts/maid";
 
 interface Attributes {}
 
@@ -17,49 +18,48 @@ const angleVision = math.rad(70);
 @Component({
 	tag: "Computer",
 })
-export class ComputerComponent extends BaseComponent<Attributes, Monitor> {
+export class ComputerComponent extends BaseComponent<Attributes, Monitor> implements OnStart {
 	constructor(private playerController: PlayerController) {
 		super();
 	}
-
 	private noiseThread?: thread;
-	private cameraConnect?: RBXScriptConnection;
+	private maid = new Maid();
 	private complexity = 2;
 	private attacked = false;
 
-	@OnReplicaCreated()
-	private Init(replica: PlayerDataReplica) {
-		replica.ListenToChange("Dynamic.SessionStatus", (newValue) => {
-			if (newValue === SessionStatus.Playing) {
-				this.start();
-			} else {
-				this.disconnect();
-			}
-		});
+	onStart(): void {
+		this.makeNoise();
+		this.maid.GiveTask(
+			this.playerController.playerCamera.CameraPositionChanged.Connect((newCframe) => {
+				if (newCframe.Position === OfficeCameraCFrame.Position && math.random(1, 10) > chanceTadjikAppearing) {
+					this.prepareToAttack();
+				}
+			}),
+		);
+		this.maid.GiveTask(
+			this.playerController.playerCamera.cameraEnableChanged.Connect((enable) => {
+				if (!enable && math.random(1, 10) > chanceTadjikAppearing) {
+					this.prepareToAttack();
+				}
+			}),
+		);
 	}
 
-	private disconnect() {
-		if (this.noiseThread === undefined || this.cameraConnect === undefined) return;
+	private stopNoise() {
+		if (this.noiseThread === undefined) return;
 		task.cancel(this.noiseThread);
-		this.cameraConnect.Disconnect();
 	}
 
-	private start() {
-		this.disconnect();
-		this.noiseThread = task.spawn(() => this.makeNoise());
-		this.cameraConnect = this.playerController.playerCamera.CameraStateChanged.Connect((state) => {
-			if (state === CameraState.computer && math.random(1, 10) > chanceTadjikAppearing) {
-				if (this.attacked) return;
-				this.attacked = true;
-				this.disconnect();
-				this.instance.ScreenBlack.Decal.Texture = tajikID;
-				this.startAttack();
-			}
-		});
+	private prepareToAttack() {
+		if (this.attacked) return;
+		this.attacked = true;
+		this.stopNoise();
+		this.instance.ScreenBlack.Decal.Texture = tajikID;
+		this.startAttack();
 	}
 
 	private startAttack() {
-		let connect: RBXScriptConnection | undefined = undefined;
+		const maid = new Maid();
 
 		const thread = task.delay(10 / this.complexity, () => {
 			this.attacked = false;
@@ -70,33 +70,45 @@ export class ComputerComponent extends BaseComponent<Attributes, Monitor> {
 			if (math.acos(dotResult) < angleVision) {
 				Events.KillPlayer.fire();
 			} else {
-				connect?.Disconnect();
-				this.start();
+				maid.DoCleaning();
+				this.makeNoise();
 			}
 		});
+		maid.GiveTask(
+			this.playerController.playerCamera.cameraEnableChanged.Connect((enable) => {
+				if (enable) {
+					task.cancel(thread);
+					maid.DoCleaning();
+					Events.KillPlayer();
+				}
+			}),
+		);
 
-		connect = this.playerController.playerCamera.CameraStateChanged.Connect((state) => {
-			if (state === CameraState.camera) {
-				Events.KillPlayer.fire();
-				return;
-			}
-			if (state === CameraState.computer) return;
-			task.cancel(thread);
-			this.disconnect();
-			connect?.Disconnect();
-			this.start();
-			this.attacked = false;
-		});
+		maid.GiveTask(
+			this.playerController.playerCamera.CameraPositionChanged.Connect((state) => {
+				task.cancel(thread);
+				maid.DoCleaning();
+				this.attacked = false;
+				this.makeNoise();
+			}),
+		);
+	}
+
+	public Clean() {
+		this.stopNoise();
+		this.maid.DoCleaning();
 	}
 
 	private makeNoise() {
-		while (task.wait(0.025)) {
-			{
-				for (let i = 0; i < Noises.size(); i++) {
-					task.wait(0.025 / Noises.size());
-					this.instance.ScreenBlack.Decal.Texture = Noises[i];
+		this.noiseThread = task.spawn(() => {
+			while (task.wait(0.025)) {
+				{
+					for (let i = 0; i < Noises.size(); i++) {
+						task.wait(0.025 / Noises.size());
+						this.instance.ScreenBlack.Decal.Texture = Noises[i];
+					}
 				}
 			}
-		}
+		});
 	}
 }

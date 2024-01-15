@@ -3,6 +3,9 @@ interface Workspace extends Instance {
 		Cameras: Folder;
 		Province: Folder & {
 			StartPart: Part;
+			Window: CameraBox;
+			Door: CameraBox;
+			Monitor: Monitor;
 		};
 		Insulator: Folder & {
 			StartPart: Part;
