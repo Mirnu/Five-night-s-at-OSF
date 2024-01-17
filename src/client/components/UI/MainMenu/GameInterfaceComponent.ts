@@ -3,6 +3,7 @@ import { Component, BaseComponent } from "@flamework/components";
 import { OnReplicaCreated } from "shared/decorators/ReplicaDecorators";
 import { PlayerDataReplica } from "types/Mad";
 import { SessionStatus } from "shared/types/SessionStatus";
+import Maid from "@rbxts/maid";
 
 interface Attributes {}
 
@@ -15,8 +16,9 @@ export class GameInterfaceComponent extends BaseComponent<Attributes, GameInterf
 		this.instance.Enabled = true;
 	}
 
+	@OnReplicaCreated()
 	public Init(replica: PlayerDataReplica) {
-		return replica.ListenToChange("Dynamic.Time", (newValue) => {
+		replica.ListenToChange("Dynamic.Time", (newValue) => {
 			let text = "AM";
 			if (newValue === 12) text = "PM";
 			this.time.Text = newValue + text;

@@ -2,15 +2,16 @@ import { Components } from "@flamework/components";
 import { Controller, OnStart, OnTick } from "@flamework/core";
 import { ReplicaController } from "@rbxts/replicaservice";
 import Signal from "@rbxts/signal";
-import { State } from "client/classes/State";
-import { PlayerCamera } from "client/classes/camera/PlayerCamera";
+import { State } from "client/StateMachine/State";
 import { LocalPlayer } from "client/utils";
 import { SessionStatus } from "shared/types/SessionStatus";
 import { PLayerStateData, PlayerDataReplica } from "types/Mad";
 import { Constructor } from "@flamework/core/out/utility";
 import { MenuState } from "client/classes/Player/MenuState";
 import { PlayingState } from "client/classes/Player/PlayingState";
-
+import { CameraComponent } from "client/components/CameraComponent";
+import { Workspace } from "@rbxts/services";
+import { StateMachine } from "client/StateMachine/StateMachine";
 class a extends State {
 	public Enter(): void {
 	}
@@ -40,33 +41,27 @@ export class PlayerController implements OnStart, OnTick {
 	public CameraGui = this.PlayerGui.WaitForChild("Camera") as CameraGui;
 	public GameInterface = this.PlayerGui.WaitForChild("GameInterface") as GameInterface;
 
+	public playerCamera!: CameraComponent;
 
-	public playerCamera = new PlayerCamera(this);
-	public CurrentState?: State;
+	public SessionStateMachine = new StateMachine()
 
 	constructor(private components: Components) {}
 
 	onStart() {
+		this.playerCamera = this.components.addComponent<CameraComponent>(Workspace.CurrentCamera!)
 		this.initReplicaCreated();
 		ReplicaController.RequestData();
-		this.CurrentState = new States[SessionStatus.Init](this);
-		this.CurrentState.Enter();
+		this.SessionStateMachine.Initialize(new States[SessionStatus.Init](this))
 	}
 
 	onTick(dt: number): void {
-		this.CurrentState?.Update()
-	}
-
-	private ChangeState(newState: State) {
-		this.CurrentState?.Exit()
-		this.CurrentState = newState;
-		this.CurrentState.Enter();
+		this.SessionStateMachine.CurrentState?.Update()
 	}
 
 	private initReplca(replica: PlayerDataReplica) {
 		replica.ListenToChange("Dynamic.SessionStatus", (newValue) => {
 			const newState = new States[newValue](this) 
-			this.ChangeState(newState)
+			this.SessionStateMachine.ChangeState(newState)
 		});
 	}
 

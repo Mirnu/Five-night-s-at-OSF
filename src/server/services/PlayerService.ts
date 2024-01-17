@@ -4,7 +4,7 @@ import ProfileService from "@rbxts/profileservice";
 import { Profile } from "@rbxts/profileservice/globals";
 import { Players, RunService } from "@rbxts/services";
 import { Enemies } from "server/classes/Enemies";
-import { Night } from "server/classes/Night";
+import { Nights } from "server/classes/Nights";
 import { PlayerComponent } from "server/components/PlayerComponent";
 import { Events } from "server/network";
 import { SessionStatus } from "shared/types/SessionStatus";
@@ -29,20 +29,12 @@ export class PlayerService implements OnStart {
 			const component = this.components.addComponent<PlayerComponent>(player);
 			this.createProfile(player, component);
 			component.SetSessionStatus(SessionStatus.Menu);
+			new Nights(component).Init();
 		});
 		Players.PlayerRemoving.Connect((player) => {
 			this.removeProfile(player);
 		});
-		this.gameInit();
 		new Enemies().Init();
-	}
-
-	private gameInit() {
-		Events.NewGame.connect((player) => {
-			const playerComponent = this.components.getComponent<PlayerComponent>(player)!;
-			const night = new Night(playerComponent, 1);
-			night.Start();
-		});
 	}
 
 	private createProfile(player: Player, playerComponent: PlayerComponent) {

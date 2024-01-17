@@ -1,33 +1,26 @@
-import { TweenService, UserInputService, Workspace } from "@rbxts/services";
+import { OnStart } from "@flamework/core";
+import { Component, BaseComponent } from "@flamework/components";
+import { LocalPlayer, Noises, OfficeCameraCFrame, ScalarProduct } from "client/utils";
+import { TweenService, Workspace } from "@rbxts/services";
 import Signal from "@rbxts/signal";
 import { PlayerController } from "client/controllers/PlayerController";
-import { Events } from "client/network";
-import { LocalPlayer, Noises, OfficeCameraCFrame, ScalarProduct } from "client/utils";
-import { OnReplicaCreated } from "shared/decorators/ReplicaDecorators";
-import { CameraState } from "shared/types/CameraState";
-import { SessionStatus } from "shared/types/SessionStatus";
-import { PlayerDataReplica } from "types/Mad";
+
+interface Attributes {}
 
 const CameraRestriction = new ReadonlyMap<number, [number, number]>([[1, [170, 1]]]);
 
-export class PlayerCamera {
-	public camera = Workspace.CurrentCamera!;
+@Component({})
+export class CameraComponent extends BaseComponent<Attributes, Camera> implements OnStart {
 	private mouse: PlayerMouse = LocalPlayer.GetMouse();
 	private cameraGui!: CameraGui;
 
 	public canBack = true;
 
-	public readonly officeCameraCFrame = (
-		Workspace.WaitForChild("map").WaitForChild("Province").WaitForChild("StartPart") as BasePart
-	).CFrame;
-	public readonly menuCamereCFrame = (
-		Workspace.WaitForChild("map").WaitForChild("Insulator").WaitForChild("StartPart") as BasePart
-	).CFrame;
 	private lastCamera = Workspace.map.Cameras.WaitForChild("1") as Part;
 	public camerasEnabled = false;
-	public cameraEnableChanged = new Signal<(enable: boolean) => void>();
 
-	public CameraPositionChanged = new Signal<(cframe: CFrame) => void>();
+	public cameraEnableChanged = new Signal<(enable: boolean) => void>();
+	public CameraOfficePositionChanged = new Signal<(cframe: CFrame) => void>();
 
 	private sensitivity: number = 2;
 	public canRotate = false;
@@ -39,10 +32,14 @@ export class PlayerCamera {
 	private leftBorder!: number;
 
 	constructor(private playerController: PlayerController) {
-		this.rightBorder = this.camera.ViewportSize.X - this.camera.ViewportSize.X / 8;
-		this.leftBorder = this.camera.ViewportSize.X / 8;
-		this.camera.CameraType = Enum.CameraType.Scriptable;
-		this.cameraGui = playerController.CameraGui;
+		super();
+	}
+
+	onStart(): void {
+		this.rightBorder = this.instance.ViewportSize.X - this.instance.ViewportSize.X / 8;
+		this.leftBorder = this.instance.ViewportSize.X / 8;
+		this.instance.CameraType = Enum.CameraType.Scriptable;
+		this.cameraGui = this.playerController.CameraGui;
 	}
 
 	public setCameraRestriction(level: number) {
@@ -57,7 +54,7 @@ export class PlayerCamera {
 		if (this.rightCameraRestriction !== undefined) {
 			return (
 				mouse.X > this.rightBorder &&
-				math.deg(this.camera!.CFrame.Rotation.ToOrientation()["1"]) > this.rightCameraRestriction
+				math.deg(this.instance.CFrame.Rotation.ToOrientation()["1"]) > this.rightCameraRestriction
 			);
 		}
 		return mouse.X > this.rightBorder;
@@ -67,7 +64,7 @@ export class PlayerCamera {
 		if (this.leftCameraRestriction !== undefined) {
 			return (
 				mouse.X < this.leftBorder &&
-				math.deg(this.camera!.CFrame.Rotation.ToOrientation()["1"]) < this.leftCameraRestriction
+				math.deg(this.instance.CFrame.Rotation.ToOrientation()["1"]) < this.leftCameraRestriction
 			);
 		}
 		return mouse.X < this.leftBorder;
@@ -75,51 +72,44 @@ export class PlayerCamera {
 
 	public MoveMouse() {
 		if (!this.canRotate) return;
-		if (this.camera === undefined) return;
-
 		if (this.canRight(this.mouse)) {
-			this.camera.CFrame = this.camera.CFrame.mul(CFrame.Angles(0, math.rad(-this.sensitivity), 0));
+			this.instance.CFrame = this.instance.CFrame.mul(CFrame.Angles(0, math.rad(-this.sensitivity), 0));
 		} else if (this.canLeft(this.mouse)) {
-			this.camera.CFrame = this.camera.CFrame.mul(CFrame.Angles(0, math.rad(this.sensitivity), 0));
+			this.instance.CFrame = this.instance.CFrame.mul(CFrame.Angles(0, math.rad(this.sensitivity), 0));
 		}
 	}
-
-	public SetCameraCFrame(cframe: CFrame) {
-		this.camera.CFrame = cframe;
-	}
-
 	public MoveToCamera(cframe: CFrame, tweenInfo: TweenInfo) {
 		if (!this.canBack) return;
 		this.canBack = false;
-		const ts = TweenService.Create(this.camera, tweenInfo, { CFrame: cframe });
+		const ts = TweenService.Create(this.instance, tweenInfo, { CFrame: cframe });
 		ts.Play();
 		ts.Completed.Connect(() => {
 			this.canBack = true;
-			this.CameraPositionChanged.Fire(cframe);
+			this.CameraOfficePositionChanged.Fire(cframe);
 		});
 		return ts;
 	}
 
 	public ChangeCamera(button: TextButton) {
 		const cameraPart = Workspace.map.Cameras.FindFirstChild(button.Name) as Part;
-		this.SetCameraCFrame(cameraPart.CFrame);
+		this.instance.CFrame = cameraPart.CFrame;
 		this.lastCamera = cameraPart;
 	}
 
 	public OpenCamera(monitorPos: Vector3) {
 		if (!this.camerasEnabled) {
 			if (
-				this.camera.CFrame.Position !== OfficeCameraCFrame.Position ||
-				math.acos(ScalarProduct(this.camera.CFrame, monitorPos)) > math.rad(30)
+				this.instance.CFrame.Position !== OfficeCameraCFrame.Position ||
+				math.acos(ScalarProduct(this.instance.CFrame, monitorPos)) > math.rad(30)
 			)
 				return;
 			this.canRotate = false;
 			this.cameraGui.Enabled = true;
-			this.SetCameraCFrame(this.lastCamera.CFrame);
+			this.instance.CFrame = this.lastCamera.CFrame;
 		} else {
 			this.canRotate = true;
 			this.cameraGui.Enabled = false;
-			this.SetCameraCFrame(OfficeCameraCFrame);
+			this.instance.CFrame = OfficeCameraCFrame;
 		}
 		this.camerasEnabled = !this.camerasEnabled;
 		this.cameraEnableChanged.Fire(this.camerasEnabled);

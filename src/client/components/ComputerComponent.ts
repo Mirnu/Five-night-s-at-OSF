@@ -1,23 +1,18 @@
-import { OnStart, OnTick } from "@flamework/core";
+import { OnStart } from "@flamework/core";
 import { Component, BaseComponent } from "@flamework/components";
-import { Noises, OfficeCameraCFrame } from "client/utils";
+import { Noises, OfficeCameraCFrame, ScalarProduct } from "client/utils";
 import { PlayerController } from "client/controllers/PlayerController";
-import { CameraState } from "shared/types/CameraState";
-import { OnReplicaCreated } from "shared/decorators/ReplicaDecorators";
-import { PlayerDataReplica } from "types/Mad";
-import { SessionStatus } from "shared/types/SessionStatus";
 import { Events } from "client/network";
 import Maid from "@rbxts/maid";
+import { CameraComponent } from "./CameraComponent";
 
 interface Attributes {}
 
 const tajikID = "rbxassetid://10427371065";
 const chanceTadjikAppearing = 5;
-const angleVision = math.rad(70);
+const angleVision = math.rad(60);
 
-@Component({
-	tag: "Computer",
-})
+@Component({})
 export class ComputerComponent extends BaseComponent<Attributes, Monitor> implements OnStart {
 	constructor(private playerController: PlayerController) {
 		super();
@@ -26,18 +21,20 @@ export class ComputerComponent extends BaseComponent<Attributes, Monitor> implem
 	private maid = new Maid();
 	private complexity = 2;
 	private attacked = false;
+	private cameraComponent!: CameraComponent;
 
 	onStart(): void {
+		this.cameraComponent = this.playerController.playerCamera;
 		this.makeNoise();
 		this.maid.GiveTask(
-			this.playerController.playerCamera.CameraPositionChanged.Connect((newCframe) => {
+			this.cameraComponent.CameraOfficePositionChanged.Connect((newCframe) => {
 				if (newCframe.Position === OfficeCameraCFrame.Position && math.random(1, 10) > chanceTadjikAppearing) {
 					this.prepareToAttack();
 				}
 			}),
 		);
 		this.maid.GiveTask(
-			this.playerController.playerCamera.cameraEnableChanged.Connect((enable) => {
+			this.cameraComponent.cameraEnableChanged.Connect((enable) => {
 				if (!enable && math.random(1, 10) > chanceTadjikAppearing) {
 					this.prepareToAttack();
 				}
@@ -61,42 +58,49 @@ export class ComputerComponent extends BaseComponent<Attributes, Monitor> implem
 	private startAttack() {
 		const maid = new Maid();
 
-		const thread = task.delay(10 / this.complexity, () => {
-			this.attacked = false;
-			const screenPosition = this.instance.ScreenBlack.CFrame.Position;
-			const dirVector = screenPosition.sub(this.playerController.playerCamera.camera.CFrame.Position).Unit;
-			const dotResult = dirVector.Dot(this.playerController.playerCamera.camera.CFrame.LookVector);
-
-			if (math.acos(dotResult) < angleVision) {
-				Events.KillPlayer.fire();
-			} else {
-				maid.DoCleaning();
-				this.makeNoise();
-			}
-		});
 		maid.GiveTask(
-			this.playerController.playerCamera.cameraEnableChanged.Connect((enable) => {
+			task.delay(10 / this.complexity, () => {
+				Events.KillPlayer.fire();
+				maid.DoCleaning();
+			}),
+		);
+		maid.GiveTask(
+			this.cameraComponent.cameraEnableChanged.Connect((enable) => {
 				if (enable) {
-					task.cancel(thread);
-					maid.DoCleaning();
 					Events.KillPlayer();
+					maid.DoCleaning();
 				}
 			}),
 		);
 
 		maid.GiveTask(
-			this.playerController.playerCamera.CameraPositionChanged.Connect((state) => {
-				task.cancel(thread);
-				maid.DoCleaning();
+			this.cameraComponent.CameraOfficePositionChanged.Connect((state) => {
 				this.attacked = false;
 				this.makeNoise();
+				maid.DoCleaning();
+			}),
+		);
+
+		maid.GiveTask(
+			this.cameraComponent.instance.GetPropertyChangedSignal("CFrame").Connect(() => {
+				if (this.cameraComponent.instance.CFrame.Position !== OfficeCameraCFrame.Position) return;
+				if (
+					math.acos(
+						ScalarProduct(this.cameraComponent.instance.CFrame, this.instance.ScreenBlack.CFrame.Position),
+					) > angleVision
+				) {
+					this.attacked = false;
+					this.makeNoise();
+					maid.DoCleaning();
+				}
 			}),
 		);
 	}
 
-	public Clean() {
+	destroy(): void {
 		this.stopNoise();
 		this.maid.DoCleaning();
+		super.destroy();
 	}
 
 	private makeNoise() {

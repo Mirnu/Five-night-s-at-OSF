@@ -4,7 +4,6 @@ import { Component, BaseComponent } from "@flamework/components";
 import { PLayerStateData } from "types/Mad";
 import Signal from "@rbxts/signal";
 import { SessionStatus } from "shared/types/SessionStatus";
-import { Events } from "server/network";
 
 interface Attributes {}
 

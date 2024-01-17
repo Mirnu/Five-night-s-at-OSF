@@ -22,7 +22,7 @@ export class WindowComponent extends BaseComponent<Attributes, CameraBox> implem
 
 		UserInputService.InputBegan.Connect((input) => {
 			if (input.KeyCode === Enum.KeyCode.Q) {
-				if (this.playerController.playerCamera.camera.CFrame.Position !== this.cameraPosition) return;
+				if (this.playerController.playerCamera.instance.CFrame.Position !== this.cameraPosition) return;
 				this.playerController.playerCamera.canRotate = true;
 				this.playerController.playerCamera.MoveToCamera(OfficeCameraCFrame, new TweenInfo(1));
 			}

@@ -3,6 +3,7 @@ import { Component, BaseComponent } from "@flamework/components";
 import { PlayerController } from "client/controllers/PlayerController";
 import { TweenService, UserInputService } from "@rbxts/services";
 import { OfficeCameraCFrame } from "client/utils";
+import { CameraComponent } from "./CameraComponent";
 
 interface Attributes {}
 
@@ -10,11 +11,13 @@ interface Attributes {}
 export class DoorComponent extends BaseComponent<Attributes, Door> implements OnStart {
 	public Opened = true;
 	private cameraPosition = this.instance.Camera.CFrame.Position;
+	private cameraComponent!: CameraComponent;
 
 	constructor(private playerController: PlayerController) {
 		super();
 	}
 	onStart() {
+		this.cameraComponent = this.playerController.playerCamera;
 		this.instance.ClickDetector.MouseClick.Connect(() => {
 			const camera = this.playerController.playerCamera;
 			camera.MoveToCamera(this.instance.Camera.CFrame, new TweenInfo(1));
@@ -25,7 +28,7 @@ export class DoorComponent extends BaseComponent<Attributes, Door> implements On
 				this.close();
 			}
 			if (input.KeyCode === Enum.KeyCode.Q) {
-				if (this.playerController.playerCamera.camera.CFrame.Position !== this.cameraPosition) return;
+				if (this.playerController.playerCamera.instance.CFrame.Position !== this.cameraPosition) return;
 				this.open();
 				this.playerController.playerCamera.canRotate = true;
 				this.playerController.playerCamera.MoveToCamera(OfficeCameraCFrame, new TweenInfo(1));
@@ -47,6 +50,7 @@ export class DoorComponent extends BaseComponent<Attributes, Door> implements On
 	}
 
 	private close() {
+		if (this.cameraComponent.instance.CFrame.Position !== this.cameraPosition) return;
 		this.Opened = false;
 		const ts = TweenService.Create(this.instance.Door.stick, new TweenInfo(0.5), {
 			CFrame: CFrame.Angles(0, math.rad(90), 0).add(this.instance.Door.stick.Position),
