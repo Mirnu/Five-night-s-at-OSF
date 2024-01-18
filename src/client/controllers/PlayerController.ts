@@ -51,7 +51,7 @@ export class PlayerController implements OnStart, OnTick {
 		this.playerCamera = this.components.addComponent<CameraComponent>(Workspace.CurrentCamera!)
 		this.initReplicaCreated();
 		ReplicaController.RequestData();
-		this.SessionStateMachine.Initialize(new States[SessionStatus.Init](this))
+		this.SessionStateMachine.Initialize(new States[SessionStatus.Init](this.components, this))
 	}
 
 	onTick(dt: number): void {
@@ -60,7 +60,7 @@ export class PlayerController implements OnStart, OnTick {
 
 	private initReplca(replica: PlayerDataReplica) {
 		replica.ListenToChange("Dynamic.SessionStatus", (newValue) => {
-			const newState = new States[newValue](this) 
+			const newState = new States[newValue](this.components, this) 
 			this.SessionStateMachine.ChangeState(newState)
 		});
 	}

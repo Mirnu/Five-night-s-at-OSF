@@ -1,5 +1,5 @@
 export enum SessionStatus {
-	Init,
+	Init = 0,
 	Playing,
 	Menu,
 }

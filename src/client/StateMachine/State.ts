@@ -5,9 +5,8 @@ import { PlayerController } from "client/controllers/PlayerController";
 
 export abstract class State {
 	protected maid = new Maid();
-	protected components = Dependency<Components>();
 
-	constructor(protected readonly playerController: PlayerController) {}
+	constructor(protected readonly components: Components, protected readonly playerController: PlayerController) {}
 
 	public abstract Enter(): void;
 	public abstract Exit(): void;

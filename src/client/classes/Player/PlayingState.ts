@@ -4,7 +4,7 @@ import { GameInterfaceComponent } from "client/components/UI/MainMenu/GameInterf
 import { UserInputService, Workspace } from "@rbxts/services";
 import { DoorComponent } from "client/components/DoorComponent";
 import { WindowComponent } from "client/components/WindowComponent";
-import { CameraComponent } from "client/components/CameraComponent";
+import { CameraComponent, CameraState } from "client/components/CameraComponent";
 import { ComputerComponent } from "client/components/ComputerComponent";
 
 export class PlayingState extends State {
@@ -28,7 +28,16 @@ export class PlayingState extends State {
 		this.maid.GiveTask(
 			UserInputService.InputBegan.Connect((input) => {
 				if (input.KeyCode === Enum.KeyCode.Space) {
-					this.playerController.playerCamera.OpenCamera(this.monitor.ScreenBlack.CFrame.Position);
+					this.camera.OpenCamera(this.monitor.ScreenBlack.CFrame.Position);
+				} else if (input.KeyCode === Enum.KeyCode.F) {
+					this.camera.EnableFlashLight();
+				}
+			}),
+		);
+		this.maid.GiveTask(
+			UserInputService.InputEnded.Connect((input) => {
+				if (input.KeyCode === Enum.KeyCode.F) {
+					this.camera.DisableFlashLight();
 				}
 			}),
 		);
@@ -37,7 +46,7 @@ export class PlayingState extends State {
 			const button = _button as TextButton;
 
 			button.Activated.Connect(() => {
-				this.playerController.playerCamera.ChangeCamera(button);
+				this.camera.ChangeCamera(button);
 			});
 		});
 	}
@@ -45,7 +54,7 @@ export class PlayingState extends State {
 	public Exit(): void {
 		this.playerController.CameraGui.Enabled = false;
 		this.playerController.GameInterface.Enabled = false;
-		this.playerController.playerCamera.camerasEnabled = false;
+		this.camera.camerasEnabled = false;
 
 		this.components.removeComponent<GameInterfaceComponent>(this.playerController.GameInterface);
 		this.components.removeComponent<DoorComponent>(Workspace.map.Province.Door);

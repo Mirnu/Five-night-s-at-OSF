@@ -4,10 +4,16 @@ import { LocalPlayer, Noises, OfficeCameraCFrame, ScalarProduct } from "client/u
 import { TweenService, Workspace } from "@rbxts/services";
 import Signal from "@rbxts/signal";
 import { PlayerController } from "client/controllers/PlayerController";
+import { PizzeriaCamera } from "types/PizzeriaCamera";
 
 interface Attributes {}
 
 const CameraRestriction = new ReadonlyMap<number, [number, number]>([[1, [170, 1]]]);
+
+export enum CameraState {
+	Pizzeria,
+	Office,
+}
 
 @Component({})
 export class CameraComponent extends BaseComponent<Attributes, Camera> implements OnStart {
@@ -16,11 +22,16 @@ export class CameraComponent extends BaseComponent<Attributes, Camera> implement
 
 	public canBack = true;
 
-	private lastCamera = Workspace.map.Cameras.WaitForChild("1") as Part;
+	private lastCamera = Workspace.map.Cameras.WaitForChild("1") as PizzeriaCamera;
 	public camerasEnabled = false;
 
 	public cameraEnableChanged = new Signal<(enable: boolean) => void>();
 	public CameraOfficePositionChanged = new Signal<(cframe: CFrame) => void>();
+
+	public FlashLightEnabledSignal = new Signal<(room: string) => void>();
+	public FlashLightDisabledSignal = new Signal<(room: string) => void>();
+
+	private CameraState = CameraState.Office;
 
 	private sensitivity: number = 2;
 	public canRotate = false;
@@ -93,7 +104,7 @@ export class CameraComponent extends BaseComponent<Attributes, Camera> implement
 	public ChangeCamera(button: TextButton) {
 		const cameraPart = Workspace.map.Cameras.FindFirstChild(button.Name) as Part;
 		this.instance.CFrame = cameraPart.CFrame;
-		this.lastCamera = cameraPart;
+		this.lastCamera = cameraPart as unknown as PizzeriaCamera;
 	}
 
 	public OpenCamera(monitorPos: Vector3) {
@@ -107,11 +118,13 @@ export class CameraComponent extends BaseComponent<Attributes, Camera> implement
 			this.cameraGui.Enabled = true;
 			this.instance.CFrame = this.lastCamera.CFrame;
 		} else {
+			if (this.lastCamera.SpotLight.Enabled) this.DisableFlashLight();
 			this.canRotate = true;
 			this.cameraGui.Enabled = false;
 			this.instance.CFrame = OfficeCameraCFrame;
 		}
 		this.camerasEnabled = !this.camerasEnabled;
+		this.CameraState = this.camerasEnabled ? CameraState.Pizzeria : CameraState.Office;
 		this.cameraEnableChanged.Fire(this.camerasEnabled);
 	}
 
@@ -126,5 +139,17 @@ export class CameraComponent extends BaseComponent<Attributes, Camera> implement
 				}
 			}
 		});
+	}
+
+	public EnableFlashLight() {
+		if (this.CameraState !== CameraState.Pizzeria) return;
+		this.lastCamera.SpotLight.Enabled = true;
+		this.FlashLightEnabledSignal.Fire(this.lastCamera.Name);
+	}
+
+	public DisableFlashLight() {
+		if (this.CameraState !== CameraState.Pizzeria) return;
+		this.lastCamera.SpotLight.Enabled = false;
+		this.FlashLightDisabledSignal.Fire(this.lastCamera.Name);
 	}
 }
