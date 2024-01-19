@@ -10,8 +10,9 @@ import { Constructor } from "@flamework/core/out/utility";
 import { MenuState } from "client/classes/Player/MenuState";
 import { PlayingState } from "client/classes/Player/PlayingState";
 import { CameraComponent } from "client/components/CameraComponent";
-import { Workspace } from "@rbxts/services";
 import { StateMachine } from "client/StateMachine/StateMachine";
+import { WaitForPath } from "shared/utils/WaitPath";
+
 class a extends State {
 	public Enter(): void {
 	}
@@ -36,10 +37,10 @@ export class PlayerController implements OnStart, OnTick {
 	public replica!: PlayerDataReplica;
 	private waitingForReplica?: Signal;
 
-	private PlayerGui = LocalPlayer.WaitForChild("PlayerGui") as PlayerGui;
-	public Menu = this.PlayerGui.WaitForChild("Menu") as Menu;
-	public CameraGui = this.PlayerGui.WaitForChild("Camera") as CameraGui;
-	public GameInterface = this.PlayerGui.WaitForChild("GameInterface") as GameInterface;
+	private PlayerGui!: PlayerGui;
+	public Menu!: Menu;
+	public CameraGui!: CameraGui;
+	public GameInterface!: GameInterface;
 
 	public playerCamera!: CameraComponent;
 
@@ -48,8 +49,11 @@ export class PlayerController implements OnStart, OnTick {
 	constructor(private components: Components) {}
 
 	onStart() {
-		this.playerCamera = this.components.addComponent<CameraComponent>(Workspace.CurrentCamera!)
 		this.initReplicaCreated();
+		this.PlayerGui = WaitForPath(LocalPlayer, "PlayerGui", 5) as PlayerGui
+		this.Menu = WaitForPath(this.PlayerGui, "Menu", 5) as Menu
+		this.CameraGui = WaitForPath(this.PlayerGui, "Camera", 5) as CameraGui
+		this.GameInterface = WaitForPath(this.PlayerGui, "GameInterface", 5) as GameInterface
 		ReplicaController.RequestData();
 		this.SessionStateMachine.Initialize(new States[SessionStatus.Init](this.components, this))
 	}
@@ -64,7 +68,6 @@ export class PlayerController implements OnStart, OnTick {
 			this.SessionStateMachine.ChangeState(newState)
 		});
 	}
-
 
 	public GetReplicaAsync() {
 		if (this.replica) return this.replica;

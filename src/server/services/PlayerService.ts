@@ -28,6 +28,7 @@ export class PlayerService implements OnStart {
 		Players.PlayerAdded.Connect((player) => {
 			const component = this.components.addComponent<PlayerComponent>(player);
 			this.createProfile(player, component);
+			task.wait(3);
 			component.SetSessionStatus(SessionStatus.Menu);
 			new Nights(component).Init();
 		});

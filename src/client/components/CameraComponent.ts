@@ -1,14 +1,17 @@
-import { OnStart } from "@flamework/core";
+import { OnStart, OnTick } from "@flamework/core";
 import { Component, BaseComponent } from "@flamework/components";
 import { LocalPlayer, Noises, OfficeCameraCFrame, ScalarProduct } from "client/utils";
-import { TweenService, Workspace } from "@rbxts/services";
+import { RunService, TweenService, Workspace } from "@rbxts/services";
 import Signal from "@rbxts/signal";
 import { PlayerController } from "client/controllers/PlayerController";
 import { PizzeriaCamera } from "types/PizzeriaCamera";
+import Maid from "@rbxts/maid";
 
 interface Attributes {}
 
 const CameraRestriction = new ReadonlyMap<number, [number, number]>([[1, [170, 1]]]);
+
+const PizzeriaCameraRectriction = new Map<string, [number, number, boolean, Boolean]>();
 
 export enum CameraState {
 	Pizzeria,
@@ -20,9 +23,11 @@ export class CameraComponent extends BaseComponent<Attributes, Camera> implement
 	private mouse: PlayerMouse = LocalPlayer.GetMouse();
 	private cameraGui!: CameraGui;
 
+	private maid = new Maid();
 	public canBack = true;
 
 	private lastCamera = Workspace.map.Cameras.WaitForChild("1") as PizzeriaCamera;
+	public pizzeriaCameraChanged = new Signal<(camera: PizzeriaCamera) => void>();
 	public camerasEnabled = false;
 
 	public cameraEnableChanged = new Signal<(enable: boolean) => void>();
@@ -31,7 +36,7 @@ export class CameraComponent extends BaseComponent<Attributes, Camera> implement
 	public FlashLightEnabledSignal = new Signal<(room: string) => void>();
 	public FlashLightDisabledSignal = new Signal<(room: string) => void>();
 
-	private CameraState = CameraState.Office;
+	public CameraState = CameraState.Office;
 
 	private sensitivity: number = 2;
 	public canRotate = false;
@@ -47,10 +52,52 @@ export class CameraComponent extends BaseComponent<Attributes, Camera> implement
 	}
 
 	onStart(): void {
+		this.instance.CameraType = Enum.CameraType.Scriptable;
 		this.rightBorder = this.instance.ViewportSize.X - this.instance.ViewportSize.X / 8;
 		this.leftBorder = this.instance.ViewportSize.X / 8;
-		this.instance.CameraType = Enum.CameraType.Scriptable;
+
 		this.cameraGui = this.playerController.CameraGui;
+		this.turnPizzeriaCamera();
+		this.setPizzeriaCameraRestriction(this.lastCamera);
+	}
+
+	destroy(): void {
+		this.maid.DoCleaning();
+		super.destroy();
+	}
+
+	private setPizzeriaCameraRestriction(camera: PizzeriaCamera) {
+		if (PizzeriaCameraRectriction.get(camera.Name)) return;
+		const firstCameraY = math.deg(camera.CFrame.ToEulerAnglesYXZ()["1"]);
+		const left = firstCameraY + 30 >= 180;
+		const right = firstCameraY - 30 <= -180;
+		PizzeriaCameraRectriction.set(camera.Name, [
+			left ? -180 + (firstCameraY - 150) : firstCameraY + 30,
+			right ? 180 + (firstCameraY + 150) : firstCameraY - 30,
+			left,
+			right,
+		]);
+	}
+
+	private turnPizzeriaCamera() {
+		const maid = new Maid();
+		this.maid.GiveTask(maid);
+		maid.GiveTask(
+			this.lastCamera.GetPropertyChangedSignal("CFrame").Connect(() => {
+				assert(this.CameraState === CameraState.Pizzeria, "CameraState in not Pizzeria");
+				this.instance.CFrame = this.lastCamera.CFrame;
+			}),
+		);
+
+		this.pizzeriaCameraChanged.Connect((camera) => {
+			maid.DoCleaning();
+			maid.GiveTask(
+				this.lastCamera.GetPropertyChangedSignal("CFrame").Connect(() => {
+					assert(this.CameraState === CameraState.Pizzeria, "CameraState in not Pizzeria");
+					this.instance.CFrame = this.lastCamera.CFrame;
+				}),
+			);
+		});
 	}
 
 	public setCameraRestriction(level: number) {
@@ -61,32 +108,61 @@ export class CameraComponent extends BaseComponent<Attributes, Camera> implement
 		this.leftCameraRestriction = cameraRestriction[0];
 	}
 
-	private canRight(mouse: PlayerMouse) {
-		if (this.rightCameraRestriction !== undefined) {
-			return (
-				mouse.X > this.rightBorder &&
-				math.deg(this.instance.CFrame.Rotation.ToOrientation()["1"]) > this.rightCameraRestriction
-			);
-		}
-		return mouse.X > this.rightBorder;
+	private canPizzeriaCameraRight() {
+		const restriction = PizzeriaCameraRectriction.get(this.lastCamera.Name)!;
+		const cameraY = restriction["1"];
+		const hasRestriction =
+			cameraY < -180 || restriction["3"]
+				? math.deg(this.lastCamera.CFrame.ToEulerAnglesYXZ()["1"]) < cameraY
+				: math.deg(this.lastCamera.CFrame.ToEulerAnglesYXZ()["1"]) > cameraY;
+		return this.mouse.X > this.rightBorder && hasRestriction;
 	}
 
-	private canLeft(mouse: PlayerMouse) {
-		if (this.leftCameraRestriction !== undefined) {
+	private canPizzeriaCameraLeft() {
+		const restriction = PizzeriaCameraRectriction.get(this.lastCamera.Name)!;
+		const cameraY = restriction["0"];
+		const hasRestriction =
+			cameraY > 180
+				? math.deg(this.lastCamera.CFrame.ToEulerAnglesYXZ()["1"]) > cameraY
+				: math.deg(this.lastCamera.CFrame.ToEulerAnglesYXZ()["1"]) < cameraY;
+
+		return this.mouse.X < this.leftBorder && hasRestriction;
+	}
+
+	private canOfficeCameraRight() {
+		if (this.rightCameraRestriction !== undefined) {
 			return (
-				mouse.X < this.leftBorder &&
-				math.deg(this.instance.CFrame.Rotation.ToOrientation()["1"]) < this.leftCameraRestriction
+				this.mouse.X > this.rightBorder &&
+				math.deg(this.instance.CFrame.ToEulerAnglesYXZ()["1"]) > this.rightCameraRestriction
 			);
 		}
-		return mouse.X < this.leftBorder;
+		return this.mouse.X > this.rightBorder;
+	}
+
+	private canOfficeCameraLeft() {
+		if (this.leftCameraRestriction !== undefined) {
+			return (
+				this.mouse.X < this.leftBorder &&
+				math.deg(this.instance.CFrame.ToEulerAnglesYXZ()["1"]) < this.leftCameraRestriction
+			);
+		}
+		return this.mouse.X < this.leftBorder;
 	}
 
 	public MoveMouse() {
-		if (!this.canRotate) return;
-		if (this.canRight(this.mouse)) {
-			this.instance.CFrame = this.instance.CFrame.mul(CFrame.Angles(0, math.rad(-this.sensitivity), 0));
-		} else if (this.canLeft(this.mouse)) {
-			this.instance.CFrame = this.instance.CFrame.mul(CFrame.Angles(0, math.rad(this.sensitivity), 0));
+		if (this.CameraState === CameraState.Office) {
+			if (!this.canRotate) return;
+			if (this.canOfficeCameraRight()) {
+				this.instance.CFrame = this.instance.CFrame.mul(CFrame.Angles(0, math.rad(-this.sensitivity), 0));
+			} else if (this.canOfficeCameraLeft()) {
+				this.instance.CFrame = this.instance.CFrame.mul(CFrame.Angles(0, math.rad(this.sensitivity), 0));
+			}
+		} else {
+			if (this.canPizzeriaCameraRight()) {
+				this.lastCamera.CFrame = this.lastCamera.CFrame.mul(CFrame.Angles(0, math.rad(-this.sensitivity), 0));
+			} else if (this.canPizzeriaCameraLeft()) {
+				this.lastCamera.CFrame = this.lastCamera.CFrame.mul(CFrame.Angles(0, math.rad(this.sensitivity), 0));
+			}
 		}
 	}
 	public MoveToCamera(cframe: CFrame, tweenInfo: TweenInfo) {
@@ -102,9 +178,11 @@ export class CameraComponent extends BaseComponent<Attributes, Camera> implement
 	}
 
 	public ChangeCamera(button: TextButton) {
-		const cameraPart = Workspace.map.Cameras.FindFirstChild(button.Name) as Part;
+		const cameraPart = Workspace.map.Cameras.FindFirstChild(button.Name) as PizzeriaCamera;
+		this.setPizzeriaCameraRestriction(cameraPart);
 		this.instance.CFrame = cameraPart.CFrame;
-		this.lastCamera = cameraPart as unknown as PizzeriaCamera;
+		this.lastCamera = cameraPart;
+		this.pizzeriaCameraChanged.Fire(this.lastCamera);
 	}
 
 	public OpenCamera(monitorPos: Vector3) {

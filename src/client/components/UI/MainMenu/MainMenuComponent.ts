@@ -10,7 +10,6 @@ interface Attributes {}
 
 @Component({})
 export class MainMenuComponent extends BaseComponent<Attributes, Menu> implements OnStart {
-	private camera = Workspace.CurrentCamera!;
 	private continueGame = this.instance.ContinueGame;
 	private newGame = this.instance.NewGame;
 

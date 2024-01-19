@@ -3,8 +3,9 @@ import { Dependency } from "@flamework/core";
 import Maid from "@rbxts/maid";
 import { PlayerComponent } from "server/components/PlayerComponent";
 import { Events } from "server/network";
+import { TimeScreenSaver } from "shared/utils/Settings";
 
-const speedNight = 5;
+const speedNight = 50;
 const components = Dependency<Components>();
 
 export class Nights {
@@ -15,8 +16,12 @@ export class Nights {
 	public Init() {
 		Events.NewGame.connect((player) => {
 			this.maid.DoCleaning();
-			const playerComponent = components.getComponent<PlayerComponent>(player)!;
+			this.playerComponent.SetTime(12);
+			this.time = 0;
 			this.Start(1);
+		});
+		Events.KillPlayer.connect((player) => {
+			this.maid.DoCleaning();
 		});
 	}
 
@@ -25,6 +30,7 @@ export class Nights {
 			task.spawn(() => {
 				this.playerComponent.SetNight(level);
 				this.playerComponent.StartNight();
+				task.wait(TimeScreenSaver);
 
 				while (task.wait(60 / speedNight)) {
 					this.time += 1;

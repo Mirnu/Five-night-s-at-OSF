@@ -9,6 +9,8 @@ export class StateMachine {
 	}
 
 	public ChangeState(newState: State) {
+		print(this.CurrentState, newState);
+		if (newState === this.CurrentState) return;
 		this.CurrentState?.Exit();
 		this.CurrentState = newState;
 		this.CurrentState.Enter();

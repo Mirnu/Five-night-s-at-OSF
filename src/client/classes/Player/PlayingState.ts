@@ -1,15 +1,16 @@
 import { Noises, OfficeCameraCFrame } from "client/utils";
 import { State } from "../../StateMachine/State";
-import { GameInterfaceComponent } from "client/components/UI/MainMenu/GameInterfaceComponent";
+import { GameInterfaceComponent } from "client/components/UI/GameInterfaceComponent";
 import { UserInputService, Workspace } from "@rbxts/services";
 import { DoorComponent } from "client/components/DoorComponent";
 import { WindowComponent } from "client/components/WindowComponent";
-import { CameraComponent, CameraState } from "client/components/CameraComponent";
+import { CameraComponent } from "client/components/CameraComponent";
 import { ComputerComponent } from "client/components/ComputerComponent";
+import { WaitForPath } from "shared/utils/WaitPath";
 
 export class PlayingState extends State {
 	private camera!: CameraComponent;
-	private province = Workspace.WaitForChild("map").WaitForChild("Province") as Workspace["map"]["Province"];
+	private province = WaitForPath(Workspace.WaitForChild("map"), "Province") as Workspace["map"]["Province"];
 	private door = this.province.WaitForChild("Door") as Door;
 	private window = this.province.WaitForChild("Window") as CameraBox;
 	private monitor = this.province.WaitForChild("Monitor") as Monitor;
@@ -20,7 +21,6 @@ export class PlayingState extends State {
 		this.camera.canRotate = true;
 		this.camera.setCameraRestriction(this.playerController.replica.Data.Static.Night);
 		this.maid.GiveTask(this.camera.StartNoises());
-		this.components.addComponent<GameInterfaceComponent>(this.playerController.GameInterface);
 		this.components.addComponent<DoorComponent>(this.door);
 		this.components.addComponent<WindowComponent>(this.window);
 		this.components.addComponent<ComputerComponent>(this.monitor);
@@ -45,9 +45,11 @@ export class PlayingState extends State {
 		this.playerController.CameraGui.Cameras.GetChildren().forEach((_button) => {
 			const button = _button as TextButton;
 
-			button.Activated.Connect(() => {
-				this.camera.ChangeCamera(button);
-			});
+			this.maid.GiveTask(
+				button.Activated.Connect(() => {
+					this.camera.ChangeCamera(button);
+				}),
+			);
 		});
 	}
 
@@ -60,6 +62,7 @@ export class PlayingState extends State {
 		this.components.removeComponent<DoorComponent>(Workspace.map.Province.Door);
 		this.components.removeComponent<WindowComponent>(Workspace.map.Province.Window);
 		this.components.removeComponent<ComputerComponent>(this.monitor);
+		this.components.removeComponent<CameraComponent>(Workspace.CurrentCamera!);
 		this.maid.DoCleaning();
 		this.monitor.ScreenBlack.Decal.Texture = Noises[0];
 	}
