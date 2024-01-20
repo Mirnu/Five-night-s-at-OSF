@@ -22,6 +22,7 @@ export enum CameraState {
 export class CameraComponent extends BaseComponent<Attributes, Camera> implements OnStart {
 	private mouse: PlayerMouse = LocalPlayer.GetMouse();
 	private cameraGui!: CameraGui;
+	private ts: Tween[] = [];
 
 	private maid = new Maid();
 	public canBack = true;
@@ -37,6 +38,8 @@ export class CameraComponent extends BaseComponent<Attributes, Camera> implement
 	public FlashLightDisabledSignal = new Signal<(room: string) => void>();
 
 	public CameraState = CameraState.Office;
+
+	public CameraMoving = false;
 
 	private sensitivity: number = 2;
 	public canRotate = false;
@@ -57,12 +60,14 @@ export class CameraComponent extends BaseComponent<Attributes, Camera> implement
 		this.leftBorder = this.instance.ViewportSize.X / 8;
 
 		this.cameraGui = this.playerController.CameraGui;
+		this.cameraNoisesInit();
 		this.turnPizzeriaCamera();
 		this.setPizzeriaCameraRestriction(this.lastCamera);
 	}
 
 	destroy(): void {
 		this.maid.DoCleaning();
+		this.ts.forEach((ts) => ts.Pause());
 		super.destroy();
 	}
 
@@ -168,12 +173,14 @@ export class CameraComponent extends BaseComponent<Attributes, Camera> implement
 	public MoveToCamera(cframe: CFrame, tweenInfo: TweenInfo) {
 		if (!this.canBack) return;
 		this.canBack = false;
+		print("Moving");
 		const ts = TweenService.Create(this.instance, tweenInfo, { CFrame: cframe });
+		this.ts.push(ts);
 		ts.Play();
 		ts.Completed.Connect(() => {
 			this.canBack = true;
-			this.CameraOfficePositionChanged.Fire(cframe);
 		});
+		this.CameraOfficePositionChanged.Fire(cframe);
 		return ts;
 	}
 
@@ -181,29 +188,80 @@ export class CameraComponent extends BaseComponent<Attributes, Camera> implement
 		const cameraPart = Workspace.map.Cameras.FindFirstChild(button.Name) as PizzeriaCamera;
 		this.setPizzeriaCameraRestriction(cameraPart);
 		this.instance.CFrame = cameraPart.CFrame;
+		this.DisableFlashLight();
 		this.lastCamera = cameraPart;
 		this.pizzeriaCameraChanged.Fire(this.lastCamera);
 	}
 
 	public OpenCamera(monitorPos: Vector3) {
+		if (this.CameraMoving) return;
 		if (!this.camerasEnabled) {
 			if (
 				this.instance.CFrame.Position !== OfficeCameraCFrame.Position ||
 				math.acos(ScalarProduct(this.instance.CFrame, monitorPos)) > math.rad(30)
 			)
 				return;
+			this.CameraMoving = true;
+			const ts = TweenService.Create(this.instance, new TweenInfo(1.5), {
+				CFrame: Workspace.map.Province.Monitor.ScreenBlack.CFrame,
+			});
+			this.ts.push(ts);
+			ts.Play();
 			this.canRotate = false;
-			this.cameraGui.Enabled = true;
-			this.instance.CFrame = this.lastCamera.CFrame;
+			this.maid.GiveTask(
+				task.delay(1, () => {
+					ts.Pause();
+					this.cameraGui.Enabled = true;
+					this.instance.CFrame = this.lastCamera.CFrame;
+					this.CameraMoving = false;
+				}),
+			);
 		} else {
 			if (this.lastCamera.SpotLight.Enabled) this.DisableFlashLight();
-			this.canRotate = true;
+			this.instance.CFrame = Workspace.map.Province.Monitor.ScreenBlack.CFrame;
+			this.CameraMoving = true;
+			const ts = TweenService.Create(this.instance, new TweenInfo(1.5), { CFrame: OfficeCameraCFrame });
+			this.ts.push(ts);
+			ts.Play();
 			this.cameraGui.Enabled = false;
-			this.instance.CFrame = OfficeCameraCFrame;
+			this.maid.GiveTask(
+				ts.Completed.Connect(() => {
+					this.canRotate = true;
+					this.instance.CFrame = OfficeCameraCFrame;
+					this.CameraMoving = false;
+				}),
+			);
 		}
 		this.camerasEnabled = !this.camerasEnabled;
 		this.CameraState = this.camerasEnabled ? CameraState.Pizzeria : CameraState.Office;
 		this.cameraEnableChanged.Fire(this.camerasEnabled);
+	}
+
+	private cameraNoisesInit() {
+		let ts: Tween;
+		const noiseCamera = () => {
+			if (ts !== undefined && ts.PlaybackState === Enum.PlaybackState.Playing) ts.Pause();
+			this.cameraGui.Glitch.Transparency = 0.8;
+			ts = TweenService.Create(this.cameraGui.Glitch, new TweenInfo(0.5), { Transparency: 0.3 });
+			ts.Play();
+			ts.Completed.Connect(() => {
+				ts = TweenService.Create(
+					this.cameraGui.Glitch,
+					new TweenInfo(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut, 99999999999, true),
+					{ Transparency: 0.45 },
+				);
+				ts.Play();
+			});
+		};
+
+		this.cameraEnableChanged.Connect((enable) => {
+			if (enable) {
+				noiseCamera();
+			}
+		});
+		this.pizzeriaCameraChanged.Connect(() => {
+			noiseCamera();
+		});
 	}
 
 	public StartNoises() {
@@ -220,13 +278,13 @@ export class CameraComponent extends BaseComponent<Attributes, Camera> implement
 	}
 
 	public EnableFlashLight() {
-		if (this.CameraState !== CameraState.Pizzeria) return;
+		if (this.CameraState !== CameraState.Pizzeria || this.lastCamera.SpotLight.Enabled) return;
 		this.lastCamera.SpotLight.Enabled = true;
 		this.FlashLightEnabledSignal.Fire(this.lastCamera.Name);
 	}
 
 	public DisableFlashLight() {
-		if (this.CameraState !== CameraState.Pizzeria) return;
+		if (this.CameraState !== CameraState.Pizzeria || !this.lastCamera.SpotLight.Enabled) return;
 		this.lastCamera.SpotLight.Enabled = false;
 		this.FlashLightDisabledSignal.Fire(this.lastCamera.Name);
 	}

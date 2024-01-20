@@ -4,32 +4,33 @@ import { Component, BaseComponent } from "@flamework/components";
 import { PLayerStateData } from "types/Mad";
 import Signal from "@rbxts/signal";
 import { SessionStatus } from "shared/types/SessionStatus";
+import { PlayerService } from "server/services/PlayerService";
 
 interface Attributes {}
 
 const PlayerclassToken = ReplicaService.NewClassToken("PlayerState");
 
 @Component({})
-export class PlayerComponent extends BaseComponent<Attributes, Player> implements OnStart {
+export class PlayerComponent extends BaseComponent<Attributes, Player> {
+	constructor(private playerService: PlayerService) {
+		super();
+	}
+
 	public PlayerStateReplica?: Replica<"PlayerState">;
 	public PlayerStateChanged = new Signal<(data: PLayerStateData) => void>();
 	public SessionStatusChangedSignal = new Signal<(data: PLayerStateData) => void>();
-
-	onStart() {
-		this.initPlayerState();
-		this.PlayerStateChanged.Fire(this.PlayerStateReplica!.Data);
-	}
 
 	private playerStateChange() {
 		if (this.PlayerStateReplica?.Data) this.PlayerStateChanged.Fire(this.PlayerStateReplica?.Data);
 	}
 
-	private initPlayerState() {
+	public InitPlayerState() {
+		const profile = this.playerService.getProfile(this.instance);
 		this.PlayerStateReplica = ReplicaService.NewReplica({
 			ClassToken: PlayerclassToken,
 			Data: {
 				Static: {
-					Night: 1,
+					Night: profile?.Data.Night ?? 1,
 				},
 				Dynamic: {
 					SessionStatus: SessionStatus.Init,

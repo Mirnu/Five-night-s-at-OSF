@@ -2,24 +2,26 @@ import { OnStart } from "@flamework/core";
 import { Component, BaseComponent } from "@flamework/components";
 import { OnReplicaCreated } from "shared/decorators/ReplicaDecorators";
 import { PlayerDataReplica } from "types/Mad";
-import Maid from "@rbxts/maid";
 import { TimeScreenSaver } from "shared/utils/Settings";
+import { PlayerController } from "client/controllers/PlayerController";
 
 interface Attributes {}
 
 @Component({})
 export class GameInterfaceComponent extends BaseComponent<Attributes, GameInterface> implements OnStart {
+	constructor(private playerController: PlayerController) {
+		super();
+	}
+
 	private time = this.instance.Time;
 	private end = this.instance.Start;
-	private maid = new Maid();
-	private night = 1;
 
 	onStart(): void {
 		this.instance.Enabled = true;
 	}
 
 	public EnableStarting() {
-		this.end.Night.Text = "Night:" + tostring(this.night);
+		this.end.Night.Text = "Night:" + tostring(this.playerController.Night);
 		this.end.Visible = true;
 		task.wait(TimeScreenSaver);
 		this.end.Visible = false;
@@ -33,7 +35,6 @@ export class GameInterfaceComponent extends BaseComponent<Attributes, GameInterf
 	@OnReplicaCreated()
 	public Init(replica: PlayerDataReplica) {
 		replica.ListenToChange("Dynamic.Time", (newValue) => {
-			this.night = replica.Data.Static.Night;
 			let text = "AM";
 			if (newValue === 12) {
 				text = "PM";

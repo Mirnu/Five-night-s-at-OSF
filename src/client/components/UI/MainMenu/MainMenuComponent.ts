@@ -19,12 +19,16 @@ export class MainMenuComponent extends BaseComponent<Attributes, Menu> implement
 	}
 
 	public Init(replica: PlayerDataReplica) {
+		print(replica.Data.Static.Night);
 		if (replica.Data.Static.Night > 1) this.continueGame.Visible = true;
 	}
 
 	private initButtons() {
 		this.newGame.Activated.Connect(() => {
 			Events.NewGame.fire();
+		});
+		this.continueGame.Activated.Connect(() => {
+			Events.ContinueGame.fire();
 		});
 	}
 }

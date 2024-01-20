@@ -8,8 +8,10 @@ import { CameraComponent } from "./CameraComponent";
 
 interface Attributes {}
 
+math.randomseed(tick());
+
 const tajikID = "rbxassetid://10427371065";
-const chanceTadjikAppearing = 5;
+const chanceTadjikAppearing = 10;
 const angleVision = math.rad(60);
 
 @Component({})
@@ -28,14 +30,17 @@ export class ComputerComponent extends BaseComponent<Attributes, Monitor> implem
 		this.makeNoise();
 		this.maid.GiveTask(
 			this.cameraComponent.CameraOfficePositionChanged.Connect((newCframe) => {
-				if (newCframe.Position === OfficeCameraCFrame.Position && math.random(1, 10) > chanceTadjikAppearing) {
+				if (
+					newCframe.Position === OfficeCameraCFrame.Position &&
+					math.random(1, 100) <= chanceTadjikAppearing
+				) {
 					this.prepareToAttack();
 				}
 			}),
 		);
 		this.maid.GiveTask(
 			this.cameraComponent.cameraEnableChanged.Connect((enable) => {
-				if (!enable && math.random(1, 10) > chanceTadjikAppearing) {
+				if (!enable && math.random(1, 100) <= chanceTadjikAppearing) {
 					this.prepareToAttack();
 				}
 			}),

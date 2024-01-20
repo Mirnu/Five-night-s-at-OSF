@@ -12,6 +12,7 @@ import { PlayingState } from "client/classes/Player/PlayingState";
 import { CameraComponent } from "client/components/CameraComponent";
 import { StateMachine } from "client/StateMachine/StateMachine";
 import { WaitForPath } from "shared/utils/WaitPath";
+import Maid from "@rbxts/maid";
 
 class a extends State {
 	public Enter(): void {
@@ -41,9 +42,11 @@ export class PlayerController implements OnStart, OnTick {
 	public Menu!: Menu;
 	public CameraGui!: CameraGui;
 	public GameInterface!: GameInterface;
+	public InitMenu!: InitMenu
+	private maid = new Maid()
 
 	public playerCamera!: CameraComponent;
-
+	public Night = 1;
 	public SessionStateMachine = new StateMachine()
 
 	constructor(private components: Components) {}
@@ -54,8 +57,27 @@ export class PlayerController implements OnStart, OnTick {
 		this.Menu = WaitForPath(this.PlayerGui, "Menu", 5) as Menu
 		this.CameraGui = WaitForPath(this.PlayerGui, "Camera", 5) as CameraGui
 		this.GameInterface = WaitForPath(this.PlayerGui, "GameInterface", 5) as GameInterface
+		this.InitMenu = WaitForPath(this.PlayerGui, "InitMenu", 5) as InitMenu
+		this.startLoading()
 		ReplicaController.RequestData();
 		this.SessionStateMachine.Initialize(new States[SessionStatus.Init](this.components, this))
+
+	}
+
+	private startLoading() {
+		this.maid.GiveTask(task.spawn(() => {
+			this.InitMenu.Enabled = true
+			const texts = [".", "..", "..."]
+			while (task.wait(0.5)) {
+				for (let i = 0; i < 3; i++) {
+					task.wait(0.5/3)
+					this.InitMenu.Loading.TextLabel.Text = "Loading" + texts[i]
+				}
+			}
+		}))
+		this.maid.GiveTask(() => {
+			this.InitMenu.Enabled = false
+		})
 	}
 
 	onTick(dt: number): void {
@@ -63,9 +85,20 @@ export class PlayerController implements OnStart, OnTick {
 	}
 
 	private initReplca(replica: PlayerDataReplica) {
+		let loaded = false
 		replica.ListenToChange("Dynamic.SessionStatus", (newValue) => {
+			if (!loaded) {
+				this.maid.DoCleaning(); 
+				this.maid.Destroy()
+				loaded = true
+				this.Night = replica.Data.Static.Night
+			}
 			const newState = new States[newValue](this.components, this) 
 			this.SessionStateMachine.ChangeState(newState)
+		});
+		replica.ListenToChange("Static.Night", (newValue) => {
+			print(newValue, " This Night");
+			this.Night = newValue;
 		});
 	}
 

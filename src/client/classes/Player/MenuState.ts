@@ -1,5 +1,5 @@
 import { State } from "../../StateMachine/State";
-import { MenuCameraCFrame } from "client/utils";
+import { MenuCameraCFrame, Noises } from "client/utils";
 import { MainMenuComponent } from "client/components/UI/MainMenu/MainMenuComponent";
 import { CameraComponent, CameraState } from "client/components/CameraComponent";
 import { Workspace } from "@rbxts/services";
@@ -15,6 +15,9 @@ export class MenuState extends State {
 		this.components.addComponent<MainMenuComponent>(this.playerController.Menu).Init(this.playerController.replica);
 	}
 	public Exit(): void {
+		for (let i = 0; i < Noises.size(); i++) {
+			Workspace.map.Province.Monitor.ScreenBlack.Decal.Texture = Noises[i];
+		}
 		this.components.addComponent<GameInterfaceComponent>(this.playerController.GameInterface);
 		const gameInterface = this.components.getComponent<GameInterfaceComponent>(this.playerController.GameInterface);
 		gameInterface?.EnableStarting();

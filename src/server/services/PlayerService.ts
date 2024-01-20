@@ -2,8 +2,7 @@ import { Components } from "@flamework/components";
 import { Service, OnStart } from "@flamework/core";
 import ProfileService from "@rbxts/profileservice";
 import { Profile } from "@rbxts/profileservice/globals";
-import { Players, RunService } from "@rbxts/services";
-import { Enemies } from "server/classes/Enemies";
+import { Lighting, Players, RunService, Workspace } from "@rbxts/services";
 import { Nights } from "server/classes/Nights";
 import { PlayerComponent } from "server/components/PlayerComponent";
 import { Events } from "server/network";
@@ -25,9 +24,11 @@ export class PlayerService implements OnStart {
 
 	constructor(private components: Components) {}
 	onStart() {
+		Lighting.ClockTime = 0;
 		Players.PlayerAdded.Connect((player) => {
 			const component = this.components.addComponent<PlayerComponent>(player);
 			this.createProfile(player, component);
+			component.InitPlayerState();
 			task.wait(3);
 			component.SetSessionStatus(SessionStatus.Menu);
 			new Nights(component).Init();
@@ -35,7 +36,6 @@ export class PlayerService implements OnStart {
 		Players.PlayerRemoving.Connect((player) => {
 			this.removeProfile(player);
 		});
-		new Enemies().Init();
 	}
 
 	private createProfile(player: Player, playerComponent: PlayerComponent) {
